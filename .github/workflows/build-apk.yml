@@ -36,6 +36,13 @@ jobs:
           npx cap add android
           npx cap sync
 
+      - name: Fix Android Repositories
+        run: |
+          # Inject mavenCentral() into the repositories block of the root build.gradle
+          # This is required to download ffmpeg-kit libraries
+          sed -i 's/repositories {/repositories {\n        mavenCentral()/g' android/build.gradle
+          sed -i 's/google()/google()\n        mavenCentral()/g' android/build.gradle
+
       - name: Build APK (Debug)
         run: |
           cd android
