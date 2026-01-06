@@ -36,10 +36,12 @@ jobs:
           npx cap add android
           npx cap sync
 
-      - name: Fix Android Repositories
+      - name: Fix Dependencies & Repositories
         run: |
-          # Inject mavenCentral() into the repositories block of the root build.gradle
-          # This is required to download ffmpeg-kit libraries
+          # 1. Fix the broken version number in the plugin itself (6.0-2 -> 6.0)
+          sed -i 's/6.0-2/6.0/g' node_modules/capacitor-ffmpeg-kit/android/build.gradle
+          
+          # 2. Add repositories just to be safe
           sed -i 's/repositories {/repositories {\n        mavenCentral()/g' android/build.gradle
           sed -i 's/google()/google()\n        mavenCentral()/g' android/build.gradle
 
