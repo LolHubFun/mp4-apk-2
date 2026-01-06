@@ -1,6 +1,6 @@
 import { RenderConfig, LogEntry } from '../types';
 import { Capacitor } from '@capacitor/core';
-import { CapacitorFFmpeg } from '@capgo/capacitor-ffmpeg';
+import { Ffmpegkit } from 'capacitor-ffmpeg-kit';
 import { Filesystem, Directory } from '@capacitor/filesystem';
 
 // Helper to convert File/Blob to Base64
@@ -84,17 +84,14 @@ const nativeRender = async (
     onLog({ timestamp: new Date().toLocaleTimeString(), message: `Command: ${cmd}`, type: 'info' });
 
     // 3. Execute
-    // Note: The current @capgo/capacitor-ffmpeg plugin supports 'reencodeVideo' but not generic 'execute' yet.
-    // For V1.0 APK build stability, we are logging the command.
-    // To enable full FFmpeg commands, a custom plugin or ffmpeg-kit is required.
-    onLog({ timestamp: new Date().toLocaleTimeString(), message: "Native Command Prepared (Library Limitation)", type: 'warning' });
+    onLog({ timestamp: new Date().toLocaleTimeString(), message: "Executing Native FFmpeg Command...", type: 'warning' });
     
-    // Placeholder for actual execution when library is swapped
-    // await CapacitorFFmpeg.execute({ command: cmd });
-    console.log("Command ready:", cmd);
-
-    // Simulate success for APK demo
-    await new Promise(r => setTimeout(r, 2000));
+    // Execute using capacitor-ffmpeg-kit
+    // Note: The 'name' parameter helps identify the session in logs
+    await Ffmpegkit.exec({ 
+        command: cmd, 
+        name: `render_${Date.now()}` 
+    });
 
     onLog({ timestamp: new Date().toLocaleTimeString(), message: "Render Complete!", type: 'success' });
     
