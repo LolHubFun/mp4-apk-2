@@ -1,0 +1,5 @@
+{
+  "name": "Video Engine V1.0",
+  "description": "Native Android Renderer Interface - Merges Audio and Visuals using simulated FFmpeg logic for web preview.",
+  "requestFramePermissions": []
+}
