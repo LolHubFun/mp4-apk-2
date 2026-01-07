@@ -193,7 +193,7 @@ const App: React.FC = () => {
 
                 <FileUploader 
                   label="Select Audio (MP3)"
-                  accept="audio/mp3,audio/wav"
+                  accept="audio/*"
                   icon={<Music size={28} />}
                   file={audioFile}
                   onFileSelect={setAudioFile}
