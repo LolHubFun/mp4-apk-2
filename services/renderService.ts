@@ -1,13 +1,11 @@
 import { RenderConfig, LogEntry } from '../types';
-import { FFmpeg } from '@ffmpeg/ffmpeg';
-import { fetchFile, toBlobURL } from '@ffmpeg/util';
+import { Ffmpegkit } from 'capacitor-ffmpeg-kit';
 import { Filesystem, Directory } from '@capacitor/filesystem';
 
-// Helper to convert Blob to Base64 for Capacitor writing
-const blobToBase64 = (blob: Blob): Promise<string> => {
+const fileToBase64 = (file: File): Promise<string> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.readAsDataURL(blob);
+    reader.readAsDataURL(file);
     reader.onload = () => {
         const result = reader.result as string;
         const base64 = result.split(',')[1];
@@ -22,92 +20,54 @@ export const renderVideo = async (
   onLog: (log: LogEntry) => void,
   onProgress: (progress: number) => void
 ): Promise<string> => {
-  const ffmpeg = new FFmpeg();
-
   try {
-    // 1. Initialize & Load Engine
-    onLog({ timestamp: new Date().toLocaleTimeString(), message: "Loading FFmpeg WASM Engine...", type: 'info' });
-    
-    // We load from a reliable CDN. 
-    // In a production offline app, these files should be local, but for this build to pass instantly, we use CDN.
-    const baseURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm';
-    await ffmpeg.load({
-        coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
-        wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
-    });
+    onLog({ timestamp: new Date().toLocaleTimeString(), message: "Starting Native High-Speed Engine...", type: 'info' });
 
-    onLog({ timestamp: new Date().toLocaleTimeString(), message: "Engine Loaded. Preparing files...", type: 'info' });
+    if (!config.visualFile || !config.audioFile) throw new Error("Files missing");
 
-    // Progress Handler
-    ffmpeg.on('progress', ({ progress }) => {
-        onProgress(Math.floor(progress * 100));
-    });
-
-    ffmpeg.on('log', ({ message }) => {
-        // Filter noisy logs if needed
-        console.log("FFmpeg:", message);
-    });
-
-    if (!config.visualFile || !config.audioFile) throw new Error("Missing files");
-
-    // 2. Write Files to WASM Memory
+    // 1. Write to Cache
     const visualExt = config.visualFile.name.split('.').pop();
     const audioExt = config.audioFile.name.split('.').pop();
-    const visualName = `input_visual.${visualExt}`;
-    const audioName = `input_audio.${audioExt}`;
-    const outputName = 'output.mp4';
+    const visualFileName = `input_visual.${visualExt}`;
+    const audioFileName = `input_audio.${audioExt}`;
+    const outputFileName = `video_${Date.now()}.mp4`;
 
-    await ffmpeg.writeFile(visualName, await fetchFile(config.visualFile));
-    await ffmpeg.writeFile(audioName, await fetchFile(config.audioFile));
-
-    onLog({ timestamp: new Date().toLocaleTimeString(), message: "Files Loaded. Starting Render...", type: 'warning' });
-
-    // 3. Construct & Execute Command
-    // Loop image + Audio + x264 encoding
-    // -pix_fmt yuv420p is crucial for compatibility
-    // -shortest stops video when audio ends
-    const cmd = [
-        '-loop', '1',
-        '-i', visualName,
-        '-i', audioName,
-        '-c:v', 'libx264',
-        '-tune', 'stillimage',
-        '-c:a', 'aac', // browser friendly audio
-        '-b:a', '192k',
-        '-pix_fmt', 'yuv420p',
-        '-shortest',
-        '-y',
-        outputName
-    ];
-
-    onLog({ timestamp: new Date().toLocaleTimeString(), message: `Exec: ffmpeg ${cmd.join(' ')}`, type: 'info' });
-
-    await ffmpeg.exec(cmd);
-
-    onLog({ timestamp: new Date().toLocaleTimeString(), message: "Render Complete! Saving to device...", type: 'success' });
-
-    // 4. Read Output & Save to Device
-    const data = await ffmpeg.readFile(outputName);
-    const blob = new Blob([data], { type: 'video/mp4' });
-    
-    // Write to device filesystem (Gallery/Documents/Cache)
-    const savedFileName = `video_${Date.now()}.mp4`;
-    const base64Data = await blobToBase64(blob);
-
-    // Save to Cache (safe zone)
-    const result = await Filesystem.writeFile({
-        path: savedFileName,
-        data: base64Data,
-        directory: Directory.Documents
+    await Filesystem.writeFile({
+        path: visualFileName,
+        data: await fileToBase64(config.visualFile),
+        directory: Directory.Cache
     });
 
-    onLog({ timestamp: new Date().toLocaleTimeString(), message: `Saved to Documents/${savedFileName}`, type: 'success' });
+    await Filesystem.writeFile({
+        path: audioFileName,
+        data: await fileToBase64(config.audioFile),
+        directory: Directory.Cache
+    });
 
-    // Return the URI for playback/sharing if needed
-    return result.uri;
+    const visualUri = await Filesystem.getUri({ path: visualFileName, directory: Directory.Cache });
+    const audioUri = await Filesystem.getUri({ path: audioFileName, directory: Directory.Cache });
+    const outputUri = await Filesystem.getUri({ path: outputFileName, directory: Directory.Cache });
+
+    onLog({ timestamp: new Date().toLocaleTimeString(), message: "Native resources ready. Rendering...", type: 'warning' });
+
+    // 2. Command with High Performance Settings
+    // Using mpeg4 for max speed and compatibility
+    // Using -preset ultrafast for immediate processing
+    const cmd = `-y -loop 1 -i ${visualUri.uri} -i ${audioUri.uri} -c:v mpeg4 -q:v 5 -preset ultrafast -c:a aac -shortest ${outputUri.uri}`;
+
+    onLog({ timestamp: new Date().toLocaleTimeString(), message: "Processing in background...", type: 'info' });
+
+    await Ffmpegkit.exec({ 
+        command: cmd, 
+        name: `render_${Date.now()}` 
+    });
+
+    onLog({ timestamp: new Date().toLocaleTimeString(), message: "Native Render Success!", type: 'success' });
+    
+    return outputUri.uri;
 
   } catch (error: any) {
-    onLog({ timestamp: new Date().toLocaleTimeString(), message: `Error: ${error.message}`, type: 'error' });
-    throw error;
+      onLog({ timestamp: new Date().toLocaleTimeString(), message: `Native Error: ${error.message}`, type: 'error' });
+      throw error;
   }
 };

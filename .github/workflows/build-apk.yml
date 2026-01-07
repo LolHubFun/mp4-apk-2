@@ -20,7 +20,7 @@ jobs:
           node-version: 22
 
       - name: Install Dependencies
-        run: npm ci
+        run: npm install --legacy-peer-deps
 
       - name: Build Web App
         run: npm run build
@@ -35,6 +35,16 @@ jobs:
         run: |
           npx cap add android
           npx cap sync
+
+      - name: Fix Dependencies & Repositories
+        run: |
+          # DÜZELTME: Maven Central'da bulunmayan gpl paketi yerine standart 'full' paketini kullan
+          # Bu komut build.gradle içindeki hatalı bağımlılığı bulup düzeltir
+          sed -i 's/ffmpeg-kit-full-gpl:6.0-2/ffmpeg-kit-full:6.0/g' node_modules/capacitor-ffmpeg-kit/android/build.gradle
+          
+          # Repoların eklendiğinden emin ol
+          sed -i 's/repositories {/repositories {\n        mavenCentral()/g' android/build.gradle
+          sed -i 's/google()/google()\n        mavenCentral()/g' android/build.gradle
 
       - name: Build APK (Debug)
         run: |
