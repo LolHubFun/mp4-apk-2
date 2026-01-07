@@ -36,15 +36,15 @@ jobs:
           npx cap add android
           npx cap sync
 
-      - name: Fix Dependencies & Repositories
+      - name: Patch FFmpeg Dependency
         run: |
-          # DÜZELTME: Maven Central'da bulunmayan gpl paketi yerine standart 'full' paketini kullan
-          # Bu komut build.gradle içindeki hatalı bağımlılığı bulup düzeltir
-          sed -i 's/ffmpeg-kit-full-gpl:6.0-2/ffmpeg-kit-full:6.0/g' node_modules/capacitor-ffmpeg-kit/android/build.gradle
+          # DÜZELTME: 'full-gpl' veya 'full' yerine sadece 'ffmpeg-kit' paketini kullan. 
+          # Bu paket Maven Central'da bulunan en garanti pakettir.
+          sed -i 's/ffmpeg-kit-full-gpl:6.0-2/ffmpeg-kit:6.0/g' node_modules/capacitor-ffmpeg-kit/android/build.gradle
+          sed -i 's/ffmpeg-kit-full:6.0/ffmpeg-kit:6.0/g' node_modules/capacitor-ffmpeg-kit/android/build.gradle
           
-          # Repoların eklendiğinden emin ol
-          sed -i 's/repositories {/repositories {\n        mavenCentral()/g' android/build.gradle
-          sed -i 's/google()/google()\n        mavenCentral()/g' android/build.gradle
+          # Depoları temizle ve yeniden ekle
+          sed -i 's/repositories {/repositories {\n        mavenCentral()\n        google()/g' android/build.gradle
 
       - name: Build APK (Debug)
         run: |

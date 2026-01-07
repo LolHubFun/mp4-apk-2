@@ -21,16 +21,13 @@ export const renderVideo = async (
   onProgress: (progress: number) => void
 ): Promise<string> => {
   try {
-    onLog({ timestamp: new Date().toLocaleTimeString(), message: "Starting Native High-Speed Engine...", type: 'info' });
+    onLog({ timestamp: new Date().toLocaleTimeString(), message: "Initializing Native Engine...", type: 'info' });
 
-    if (!config.visualFile || !config.audioFile) throw new Error("Files missing");
+    if (!config.visualFile || !config.audioFile) throw new Error("Missing files");
 
-    // 1. Write to Cache
-    const visualExt = config.visualFile.name.split('.').pop();
-    const audioExt = config.audioFile.name.split('.').pop();
-    const visualFileName = `input_visual.${visualExt}`;
-    const audioFileName = `input_audio.${audioExt}`;
-    const outputFileName = `video_${Date.now()}.mp4`;
+    const visualFileName = `input_${Date.now()}.${config.visualFile.name.split('.').pop()}`;
+    const audioFileName = `input_${Date.now()}.${config.audioFile.name.split('.').pop()}`;
+    const outputFileName = `render_${Date.now()}.mp4`;
 
     await Filesystem.writeFile({
         path: visualFileName,
@@ -44,36 +41,18 @@ export const renderVideo = async (
         directory: Directory.Cache
     });
 
-    const visualUri = await Filesystem.getUri({ path: visualFileName, directory: Directory.Cache });
-    const audioUri = await Filesystem.getUri({ path: audioFileName, directory: Directory.Cache });
-    const outputUri = await Filesystem.getUri({ path: outputFileName, directory: Directory.Cache });
+    const vUri = await Filesystem.getUri({ path: visualFileName, directory: Directory.Cache });
+    const aUri = await Filesystem.getUri({ path: audioFileName, directory: Directory.Cache });
+    const oUri = await Filesystem.getUri({ path: outputFileName, directory: Directory.Cache });
 
-    onLog({ timestamp: new Date().toLocaleTimeString(), message: "Native resources ready. Rendering...", type: 'warning' });
+    // HIZLI VE BASİT KOMUT
+    const cmd = `-y -loop 1 -i ${vUri.uri} -i ${aUri.uri} -c:v mpeg4 -preset ultrafast -tune stillimage -c:a aac -shortest ${oUri.uri}`;
 
-    // 2. Resolve Resolution to Width/Height
-    let scale = "1280:720"; // default
-    if (config.resolution === '480p') scale = "854:480";
-    if (config.resolution === '720p') scale = "1280:720";
-    if (config.resolution === '1080p') scale = "1920:1080";
+    await Ffmpegkit.exec({ command: cmd, name: "main_render" });
 
-    // 3. Command with Dynamic Resolution and High Performance
-    // -vf scale: Apply the selected resolution
-    // -r: Set frames per second (e.g. 24)
-    const cmd = `-y -loop 1 -i ${visualUri.uri} -i ${audioUri.uri} -vf scale=${scale} -r ${config.fps || 24} -c:v mpeg4 -q:v 5 -preset ultrafast -c:a aac -shortest ${outputUri.uri}`;
-
-    onLog({ timestamp: new Date().toLocaleTimeString(), message: `Rendering at ${config.resolution}...`, type: 'info' });
-
-    await Ffmpegkit.exec({ 
-        command: cmd, 
-        name: `render_${Date.now()}` 
-    });
-
-    onLog({ timestamp: new Date().toLocaleTimeString(), message: "Native Render Success!", type: 'success' });
-    
-    return outputUri.uri;
-
+    return oUri.uri;
   } catch (error: any) {
-      onLog({ timestamp: new Date().toLocaleTimeString(), message: `Native Error: ${error.message}`, type: 'error' });
-      throw error;
+    onLog({ timestamp: new Date().toLocaleTimeString(), message: `Error: ${error.message}`, type: 'error' });
+    throw error;
   }
 };
