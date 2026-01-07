@@ -36,14 +36,14 @@ jobs:
           npx cap add android
           npx cap sync
 
-      - name: Patch FFmpeg Dependency
+      - name: Patch FFmpeg Dependency (LTS Fix)
         run: |
-          # DÜZELTME: 'full-gpl' veya 'full' yerine sadece 'ffmpeg-kit' paketini kullan. 
-          # Bu paket Maven Central'da bulunan en garanti pakettir.
-          sed -i 's/ffmpeg-kit-full-gpl:6.0-2/ffmpeg-kit:6.0/g' node_modules/capacitor-ffmpeg-kit/android/build.gradle
-          sed -i 's/ffmpeg-kit-full:6.0/ffmpeg-kit:6.0/g' node_modules/capacitor-ffmpeg-kit/android/build.gradle
+          # BİNGO: Versiyonun tam adı 6.0-2.LTS olmak zorunda.
+          # Hem full-gpl hem de diğer varyasyonları buna göre yamalıyoruz.
+          find node_modules/capacitor-ffmpeg-kit -name "build.gradle" -exec sed -i 's/6.0-2/6.0-2.LTS/g' {} + 
+          find node_modules/capacitor-ffmpeg-kit -name "build.gradle" -exec sed -i 's/6.0/6.0-2.LTS/g' {} + 
           
-          # Depoları temizle ve yeniden ekle
+          # Repoları garantiye al
           sed -i 's/repositories {/repositories {\n        mavenCentral()\n        google()/g' android/build.gradle
 
       - name: Build APK (Debug)
