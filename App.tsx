@@ -18,6 +18,7 @@ const App: React.FC = () => {
   const [progress, setProgress] = useState<number>(0);
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [resolution, setResolution] = useState<'480p' | '720p' | '1080p'>('720p');
+  const [renderedFileUri, setRenderedFileUri] = useState<string | null>(null);
   
   // Builder State
   const [buildStep, setBuildStep] = useState<number>(0);
@@ -36,13 +37,15 @@ const App: React.FC = () => {
     setStatus(RenderStatus.PROCESSING);
     setLogs([]);
     setProgress(0);
+    setRenderedFileUri(null);
 
     try {
-      await renderVideo(
+      const resultUri = await renderVideo(
         { visualFile, audioFile, fps: 24, resolution },
         (log) => setLogs(prev => [...prev, log]),
         (prog) => setProgress(prog)
       );
+      setRenderedFileUri(resultUri);
       setStatus(RenderStatus.COMPLETED);
     } catch (error) {
       setLogs(prev => [...prev, { timestamp: new Date().toLocaleTimeString(), message: "Error: Native Bridge Failed", type: 'error' }]);
@@ -51,23 +54,38 @@ const App: React.FC = () => {
   };
 
   const handleDownload = () => {
-    // Create a dummy video file blob to satisfy user request
-    const dummyContent = `Video Engine Native Render Output\nResolution: ${resolution}\n\nReal rendering happens inside the compiled Android APK via FFmpeg.`;
-    const blob = new Blob([dummyContent], { type: 'video/mp4' }); // Mime type set to mp4 for simulation
+    if (renderedFileUri) {
+        // In a real native app, the file is already on disk.
+        // We can show a success message or trigger a share action.
+        setLogs(prev => [...prev, { 
+            timestamp: new Date().toLocaleTimeString(), 
+            message: `Video is saved at: ${renderedFileUri}`, 
+            type: 'success' 
+        }]);
+        
+        // On web preview, we still might want to 'download' something if it's a blob
+        if (renderedFileUri.startsWith('blob:') || renderedFileUri.startsWith('data:')) {
+            const a = document.createElement('a');
+            a.href = renderedFileUri;
+            a.download = `video_render_${Date.now()}.mp4`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }
+        return;
+    }
+
+    // Fallback for simulation
+    const dummyContent = `Video Engine Native Render Output\nResolution: ${resolution}`;
+    const blob = new Blob([dummyContent], { type: 'video/mp4' });
     const url = window.URL.createObjectURL(blob);
-    
     const a = document.createElement('a');
     a.href = url;
-    a.download = `video_render_${resolution}_${Date.now()}.mp4`;
+    a.download = `simulated_render.mp4`;
     document.body.appendChild(a);
     a.click();
-    
-    // Cleanup
     window.URL.revokeObjectURL(url);
     document.body.removeChild(a);
-    
-    // Optional log
-    setLogs(prev => [...prev, { timestamp: new Date().toLocaleTimeString(), message: "File downloaded to device storage.", type: 'success' }]);
   };
 
   const startBuildSimulation = () => {
@@ -249,7 +267,7 @@ const App: React.FC = () => {
                     className="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-4 rounded-xl shadow-lg shadow-green-900/20 flex items-center justify-center gap-2 transition-all active:scale-95"
                   >
                     <Download size={20} />
-                    Download Video (Simulated)
+                    {renderedFileUri ? 'Access Rendered Video' : 'Download Video (Simulated)'}
                   </button>
                 ) : (
                   <button 
