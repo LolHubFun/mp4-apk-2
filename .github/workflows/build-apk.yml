@@ -36,6 +36,16 @@ jobs:
           npx cap add android
           npx cap sync
 
+      - name: Patch FFmpeg Dependency (JitPack Fix)
+        run: |
+          # DÜZELTME: Maven Central'dan silinen paket yerine JitPack koordinatını kullan
+          # JitPack üzerinden com.github.arthenica:ffmpeg-kit çekiyoruz
+          find node_modules/capacitor-ffmpeg-kit -name "build.gradle" -exec sed -i 's/com.arthenica:ffmpeg-kit:6.0-2/com.github.arthenica:ffmpeg-kit:6.0-2/g' {} +
+          find node_modules/capacitor-ffmpeg-kit -name "build.gradle" -exec sed -i 's/com.arthenica:ffmpeg-kit:6.0/com.github.arthenica:ffmpeg-kit:6.0-2/g' {} +
+          
+          # Repoları JitPack ile güncelle
+          sed -i 's/repositories {/repositories {\n        maven { url "https:\/\/jitpack.io" }\n        google()\n        mavenCentral()/g' android/build.gradle
+
       - name: Build APK (Debug)
         run: |
           cd android

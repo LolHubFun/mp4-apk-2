@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Music, Image as ImageIcon, Cpu, Video, Settings, Download, AlertTriangle, Code, Package, Terminal, CheckCircle, XCircle, Play, FileJson } from 'lucide-react';
 import FileUploader from './components/FileUploader';
 import TerminalLog from './components/TerminalLog';
+import { Share } from '@capacitor/share';
 import { renderVideo } from './services/renderService';
 import { RenderStatus, LogEntry } from './types';
 import { CAPACITOR_CONFIG, GITHUB_WORKFLOW, RESOLUTIONS } from './constants';
@@ -53,24 +54,26 @@ const App: React.FC = () => {
     }
   };
 
-  const handleDownload = () => {
+  const handleDownload = async () => {
     if (renderedFileUri) {
-        // In a real native app, the file is already on disk.
-        // We can show a success message or trigger a share action.
-        setLogs(prev => [...prev, { 
-            timestamp: new Date().toLocaleTimeString(), 
-            message: `Video is saved at: ${renderedFileUri}`, 
-            type: 'success' 
-        }]);
-        
-        // On web preview, we still might want to 'download' something if it's a blob
-        if (renderedFileUri.startsWith('blob:') || renderedFileUri.startsWith('data:')) {
-            const a = document.createElement('a');
-            a.href = renderedFileUri;
-            a.download = `video_render_${Date.now()}.mp4`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
+        try {
+            await Share.share({
+                title: 'Save Video',
+                text: 'Your rendered video is ready!',
+                url: renderedFileUri,
+                dialogTitle: 'Save or Share Video',
+            });
+            setLogs(prev => [...prev, { 
+                timestamp: new Date().toLocaleTimeString(), 
+                message: `Share sheet opened.`, 
+                type: 'success' 
+            }]);
+        } catch (error) {
+            setLogs(prev => [...prev, { 
+                timestamp: new Date().toLocaleTimeString(), 
+                message: `Share failed: ${error}`, 
+                type: 'error' 
+            }]);
         }
         return;
     }
