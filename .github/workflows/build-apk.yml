@@ -36,15 +36,6 @@ jobs:
           npx cap add android
           npx cap sync
 
-      - name: Patch FFmpeg Dependency (Final Fix)
-        run: |
-          # Önceki hatalı yamaları temizleyip tertemiz bir 6.0-2.LTS atıyoruz.
-          # Bu sefer satırı tam hedef alıyoruz ki üst üste binmesin.
-          find node_modules/capacitor-ffmpeg-kit -name "build.gradle" -exec sed -i 's/ffmpeg-kit-full-gpl:[^'\''']*/ffmpeg-kit-full-gpl:6.0-2.LTS/g' {} +
-          
-          # Repoları en üstte ve tam liste olarak ekle
-          sed -i 's/repositories {/repositories {\n        google()\n        mavenCentral()\n        maven { url "https:\/\/jitpack.io" }/g' android/build.gradle
-
       - name: Build APK (Debug)
         run: |
           cd android

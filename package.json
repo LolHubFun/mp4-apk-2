@@ -11,7 +11,7 @@
   "dependencies": {
     "@capacitor/core": "^8.0.0",
     "@capacitor/filesystem": "^8.0.0",
-    "capacitor-ffmpeg-kit": "^0.0.5",
+    "@capgo/capacitor-ffmpeg": "^0.0.8",
     "lucide-react": "^0.562.0",
     "react": "^19.2.3",
     "react-dom": "^19.2.3"
