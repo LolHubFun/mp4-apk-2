@@ -50,12 +50,18 @@ export const renderVideo = async (
 
     onLog({ timestamp: new Date().toLocaleTimeString(), message: "Native resources ready. Rendering...", type: 'warning' });
 
-    // 2. Command with High Performance Settings
-    // Using mpeg4 for max speed and compatibility
-    // Using -preset ultrafast for immediate processing
-    const cmd = `-y -loop 1 -i ${visualUri.uri} -i ${audioUri.uri} -c:v mpeg4 -q:v 5 -preset ultrafast -c:a aac -shortest ${outputUri.uri}`;
+    // 2. Resolve Resolution to Width/Height
+    let scale = "1280:720"; // default
+    if (config.resolution === '480p') scale = "854:480";
+    if (config.resolution === '720p') scale = "1280:720";
+    if (config.resolution === '1080p') scale = "1920:1080";
 
-    onLog({ timestamp: new Date().toLocaleTimeString(), message: "Processing in background...", type: 'info' });
+    // 3. Command with Dynamic Resolution and High Performance
+    // -vf scale: Apply the selected resolution
+    // -r: Set frames per second (e.g. 24)
+    const cmd = `-y -loop 1 -i ${visualUri.uri} -i ${audioUri.uri} -vf scale=${scale} -r ${config.fps || 24} -c:v mpeg4 -q:v 5 -preset ultrafast -c:a aac -shortest ${outputUri.uri}`;
+
+    onLog({ timestamp: new Date().toLocaleTimeString(), message: `Rendering at ${config.resolution}...`, type: 'info' });
 
     await Ffmpegkit.exec({ 
         command: cmd, 
