@@ -20,7 +20,7 @@ jobs:
           node-version: 22
 
       - name: Install Dependencies
-        run: npm install --legacy-peer-deps
+        run: npm ci
 
       - name: Build Web App
         run: npm run build
@@ -35,15 +35,6 @@ jobs:
         run: |
           npx cap add android
           npx cap sync
-
-      - name: Fix Dependencies & Repositories
-        run: |
-          # 1. Fix the broken version number in the plugin itself (6.0-2 -> 6.0)
-          sed -i 's/6.0-2/6.0/g' node_modules/capacitor-ffmpeg-kit/android/build.gradle
-          
-          # 2. Add JitPack (Crucial for ffmpeg-kit) and MavenCentral
-          sed -i "s/repositories {/repositories {\\n        maven { url 'https:\/\/jitpack.io' }\\n        mavenCentral()/g" android/build.gradle
-          sed -i "s/google()/google()\\n        maven { url 'https:\/\/jitpack.io' }\\n        mavenCentral()/g" android/build.gradle
 
       - name: Build APK (Debug)
         run: |
